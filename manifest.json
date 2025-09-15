@@ -1,0 +1,66 @@
+{
+  "manifest_version": 3,
+  "name": "ShortcutPaste",
+  "version": "1.0.0",
+  "description": "Paste snippets quickly with keyboard shortcuts",
+  "icons": {
+    "16": "assets/icons/icon.png",
+    "48": "assets/icons/icon.png",
+    "128": "assets/icons/icon.png"
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "clipboardRead",
+    "clipboardWrite"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none';"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ShortcutPaste"
+  },
+  "commands": {
+    "open_snippet_overlay": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Space",
+        "mac": "Command+Shift+Space"
+      },
+      "description": "Open snippet selection overlay"
+    },
+    "paste_snippet_1": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+1",
+        "mac": "Command+Shift+1"
+      },
+      "description": "Paste snippet 1"
+    },
+    "paste_snippet_2": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+2",
+        "mac": "Command+Shift+2"
+      },
+      "description": "Paste snippet 2"
+    },
+    "paste_snippet_3": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+3",
+        "mac": "Command+Shift+3"
+      },
+      "description": "Paste snippet 3"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content-scripts/content-main.ts"],
+      "run_at": "document_idle"
+    }
+  ]
+}
