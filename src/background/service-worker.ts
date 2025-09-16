@@ -1,5 +1,7 @@
 // Chrome Extension Service Worker with proper TypeScript types
 
+import { clipboardStorage } from "@/shared/utils/clipboard-storage";
+
 // --- Bookmark sync functionality ---
 chrome.bookmarks.onCreated.addListener(syncBookmarks);
 chrome.bookmarks.onRemoved.addListener(syncBookmarks);
@@ -68,6 +70,22 @@ chrome.commands.onCommand.addListener(async (command: string) => {
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tabs[0]?.id) {
                 await chrome.tabs.sendMessage(tabs[0].id, { action: 'openOverlay' });
+            }
+        }
+        else if (command === 'paste_favorite_clipboard') {
+            // Paste favorite clipboard item
+            const clipboardItems = await clipboardStorage.getClipboardItems();
+            const favoriteItem = clipboardItems.find(item => item.isFavorite);
+
+            if (favoriteItem) {
+                // Send to active tab for pasting
+                const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (tabs[0]?.id) {
+                    await chrome.tabs.sendMessage(tabs[0].id, {
+                        action: 'pasteClipboardItem',
+                        content: favoriteItem.content
+                    });
+                }
             }
         }
         else if (command.startsWith('paste_snippet_')) {

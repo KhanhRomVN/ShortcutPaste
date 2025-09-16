@@ -35,8 +35,8 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
 
   if (!item) {
     return (
-      <div className="flex-1 flex items-center justify-center rounded-lg">
-        <div className="text-center text-text-secondary">
+      <div className="flex-1 flex items-center justify-center rounded-lg bg-card-background">
+        <div className="text-center text-text-secondary p-4">
           <FileText size={40} className="mx-auto mb-3 opacity-50" />
           <p className="text-base font-medium mb-1">No item selected</p>
           <p className="text-sm">Select a clipboard item to view its content</p>
@@ -127,7 +127,7 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
           <img
             src={content}
             alt={item.title}
-            className="max-w-full max-h-72 object-contain rounded border border-border-default"
+            className="max-w-full max-h-72 object-contain rounded border border-border-default mx-auto"
           />
           {showRawContent && (
             <div className="bg-input-background rounded p-3 text-xs">
@@ -144,12 +144,12 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
       return (
         <div className="space-y-3">
           <div
-            className="bg-white rounded border border-border-default p-3 max-h-72 overflow-auto text-sm"
+            className="bg-white rounded border border-border-default p-3 max-h-72 overflow-auto text-sm mx-auto"
             dangerouslySetInnerHTML={{ __html: content }}
           />
           <button
             onClick={() => setShowRawContent(true)}
-            className="flex items-center gap-2 text-sm text-primary hover:underline"
+            className="flex items-center gap-2 text-sm text-primary hover:underline mx-auto"
           >
             <Eye size={14} />
             Show Raw HTML
@@ -178,7 +178,7 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
         {item.type === "html" && showRawContent && (
           <button
             onClick={() => setShowRawContent(false)}
-            className="flex items-center gap-2 text-sm text-primary hover:underline"
+            className="flex items-center gap-2 text-sm text-primary hover:underline mx-auto"
           >
             <EyeOff size={14} />
             Show Rendered HTML
@@ -189,9 +189,9 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
   };
 
   return (
-    <div className="flex-1 bg-card-background rounded p-4 overflow-auto max-w-2xl">
+    <div className="flex-1 bg-card-background rounded-lg p-4 overflow-auto flex flex-col">
       {/* Header - More compact */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-4 flex-shrink-0">
         <div className="flex items-start gap-2 flex-1 min-w-0">
           {getItemIcon()}
           <div className="flex-1 min-w-0">
@@ -226,7 +226,7 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
         </div>
 
         {/* Actions - More compact buttons */}
-        <div className="flex items-center gap-1 ml-3">
+        <div className="flex items-center gap-1 ml-3 flex-shrink-0">
           {isEditing ? (
             <>
               <button
@@ -307,7 +307,7 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
       </div>
 
       {/* Content - More compact */}
-      {renderContent()}
+      <div className="flex-1 overflow-auto">{renderContent()}</div>
     </div>
   );
 };

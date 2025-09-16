@@ -1,4 +1,3 @@
-import { SnippetManager } from '@/shared/utils/snippets';
 import { OverlayHandler } from './overlay-handler';
 import { PasteHandler } from './paste-handler';
 
@@ -9,7 +8,7 @@ class ContentScriptMain {
   constructor() {
     this.overlayHandler = new OverlayHandler();
     this.pasteHandler = new PasteHandler();
-    
+
     this.initialize();
   }
 
@@ -24,7 +23,7 @@ class ContentScriptMain {
     this.injectStyles();
   }
 
-  private async handleMessage(message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) {
+  private async handleMessage(message: any, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) {
     try {
       switch (message.action) {
         case 'openOverlay':
@@ -35,6 +34,11 @@ class ContentScriptMain {
         case 'pasteSnippet':
           const success = await this.pasteHandler.pasteSnippet(message.snippetId);
           sendResponse({ success });
+          break;
+
+        case 'pasteClipboardItem':
+          const pasteSuccess = await this.pasteHandler.pasteContent(message.content);
+          sendResponse({ success: pasteSuccess });
           break;
 
         case 'getActiveElementInfo':
@@ -52,7 +56,7 @@ class ContentScriptMain {
   }
 
   private getActiveElementInfo() {
-    const activeElement = document.activeElement;
+    const activeElement = document.activeElement as HTMLElement | null;
     if (!activeElement) return { hasFocus: false };
 
     const isInput = activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA';

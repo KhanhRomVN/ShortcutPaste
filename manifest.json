@@ -2,29 +2,29 @@
   "manifest_version": 3,
   "name": "ShortcutPaste",
   "version": "1.0.0",
-  "description": "Paste snippets quickly with keyboard shortcuts",
-  "icons": {
-    "16": "assets/icons/icon.png",
-    "48": "assets/icons/icon.png",
-    "128": "assets/icons/icon.png"
-  },
+  "description": "Quick paste snippets and clipboard items",
   "permissions": [
-    "storage",
-    "tabs",
     "activeTab",
+    "storage",
     "scripting",
+    "bookmarks",
     "clipboardRead",
-    "clipboardWrite"
+    "clipboardWrite",
+    "identity"
   ],
   "background": {
-    "service_worker": "service-worker.js"
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
   },
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none';"
-  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content-scripts/content-main.ts"],
+      "run_at": "document_end"
+    }
+  ],
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "ShortcutPaste"
+    "default_popup": "src/presentation/popup.html"
   },
   "commands": {
     "open_snippet_overlay": {
@@ -32,7 +32,14 @@
         "default": "Ctrl+Shift+Space",
         "mac": "Command+Shift+Space"
       },
-      "description": "Open snippet selection overlay"
+      "description": "Open snippet overlay"
+    },
+    "paste_favorite_clipboard": {
+      "suggested_key": {
+        "default": "Ctrl+Alt+V",
+        "mac": "Command+Alt+V"
+      },
+      "description": "Paste favorite clipboard item"
     },
     "paste_snippet_1": {
       "suggested_key": {
@@ -56,11 +63,8 @@
       "description": "Paste snippet 3"
     }
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["src/content-scripts/content-main.ts"],
-      "run_at": "document_idle"
-    }
-  ]
+  "oauth2": {
+    "client_id": "YOUR_OAUTH_CLIENT_ID",
+    "scopes": ["https://www.googleapis.com/auth/userinfo.email"]
+  }
 }

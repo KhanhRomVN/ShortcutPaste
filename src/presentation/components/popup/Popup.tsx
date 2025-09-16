@@ -13,6 +13,7 @@ import {
   Plus,
   Star,
   X,
+  Keyboard,
 } from "lucide-react";
 
 const Popup: React.FC = () => {
@@ -319,6 +320,16 @@ const Popup: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Shortcut Info */}
+      <div className="p-2 bg-sidebar-background text-xs text-text-secondary border-b border-border-default">
+        <div className="flex items-center gap-1 justify-center">
+          <Keyboard size={12} />
+          <span>
+            Shortcuts: Ctrl+Shift+Space (Overlay), Ctrl+Alt+V (Paste Favorite)
+          </span>
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
