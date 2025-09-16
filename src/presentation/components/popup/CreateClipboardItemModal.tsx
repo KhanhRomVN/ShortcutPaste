@@ -9,7 +9,7 @@ import {
   Folder,
   Type,
 } from "lucide-react";
-import { ClipboardFolder, ClipboardItem } from "@/types/clipboard";
+import { ClipboardFolder, ClipboardItem } from "../../../types/clipboard";
 
 interface CreateClipboardItemModalProps {
   folders: ClipboardFolder[];

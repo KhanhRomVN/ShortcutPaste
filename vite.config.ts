@@ -4,17 +4,24 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
         popup: resolve(__dirname, 'popup.html'),
-        serviceWorker: resolve(__dirname, 'src/background/service-worker.ts')
+        serviceWorker: resolve(__dirname, 'src/background/service-worker.ts'),
+        'content-main': resolve(__dirname, 'src/content-scripts/content-main.ts')
       },
       output: {
-        entryFileNames: "[name].js",
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'serviceWorker') {
+            return 'serviceWorker.js';
+          }
+          if (chunkInfo.name === 'content-main') {
+            return 'content-main.js';
+          }
+          return '[name].js';
+        },
         chunkFileNames: "[name].js",
         assetFileNames: "[name].[ext]"
       }
@@ -24,8 +31,7 @@ export default defineConfig({
     react(),
     viteStaticCopy({
       targets: [
-        { src: 'manifest.json', dest: '.' },
-        { src: 'src/assets/icons/icon.png', dest: 'assets/icons' }
+        { src: 'manifest.json', dest: '.' }
       ]
     })
   ],

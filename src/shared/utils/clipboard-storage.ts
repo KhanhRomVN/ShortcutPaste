@@ -1,226 +1,140 @@
-import { ClipboardItem, ClipboardFolder, ClipboardSnapshot } from '@/types/clipboard';
+import { ClipboardItem, ClipboardFolder } from '../../types/clipboard';
 
-const STORAGE_KEYS = {
-    CLIPBOARD_ITEMS: 'flexbookmark_clipboard_items',
-    CLIPBOARD_FOLDERS: 'flexbookmark_clipboard_folders',
-    CLIPBOARD_SNAPSHOTS: 'flexbookmark_clipboard_snapshots'
-} as const;
+class ClipboardStorage {
+    private readonly STORAGE_KEYS = {
+        ITEMS: 'clipboard_items',
+        FOLDERS: 'clipboard_folders'
+    };
 
-export const clipboardStorage = {
-    // Clipboard Items
     async getClipboardItems(): Promise<ClipboardItem[]> {
-        if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-            return new Promise((resolve) => {
-                chrome.storage.local.get(STORAGE_KEYS.CLIPBOARD_ITEMS, (result) => {
-                    resolve(result[STORAGE_KEYS.CLIPBOARD_ITEMS] || []);
-                });
-            });
+        try {
+            const result = await chrome.storage.local.get(this.STORAGE_KEYS.ITEMS);
+            return result[this.STORAGE_KEYS.ITEMS] || [];
+        } catch (error) {
+            console.error('Failed to get clipboard items:', error);
+            return [];
         }
-        const stored = localStorage.getItem(STORAGE_KEYS.CLIPBOARD_ITEMS) || '[]';
-        return JSON.parse(stored);
-    },
+    }
 
     async saveClipboardItems(items: ClipboardItem[]): Promise<void> {
-        if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-            return new Promise((resolve) => {
-                chrome.storage.local.set({ [STORAGE_KEYS.CLIPBOARD_ITEMS]: items }, resolve);
-            });
+        try {
+            await chrome.storage.local.set({ [this.STORAGE_KEYS.ITEMS]: items });
+        } catch (error) {
+            console.error('Failed to save clipboard items:', error);
+            throw error;
         }
-        localStorage.setItem(STORAGE_KEYS.CLIPBOARD_ITEMS, JSON.stringify(items));
-    },
+    }
 
-    async addClipboardItem(item: Omit<ClipboardItem, 'id' | 'timestamp'>): Promise<ClipboardItem> {
-        const items = await this.getClipboardItems();
+    async addClipboardItem(itemData: Omit<ClipboardItem, 'id' | 'timestamp'>): Promise<ClipboardItem> {
         const newItem: ClipboardItem = {
-            ...item,
-            id: this.generateId(),
+            ...itemData,
+            id: crypto.randomUUID(),
             timestamp: Date.now(),
-            isFavorite: item.isFavorite || false
+            isFavorite: itemData.isFavorite || false
         };
-        items.unshift(newItem);
 
-        // Keep only last 1000 items
-        await this.saveClipboardItems(items.slice(0, 1000));
+        const items = await this.getClipboardItems();
+        const updatedItems = [newItem, ...items.slice(0, 999)]; // Keep max 1000 items
+
+        await this.saveClipboardItems(updatedItems);
         return newItem;
-    },
+    }
 
     async deleteClipboardItem(id: string): Promise<boolean> {
-        const items = await this.getClipboardItems();
-        const filtered = items.filter(item => item.id !== id);
-
-        if (filtered.length === items.length) return false;
-
-        await this.saveClipboardItems(filtered);
-        return true;
-    },
-
-    // Clipboard Folders
-    async getClipboardFolders(): Promise<ClipboardFolder[]> {
-        if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-            return new Promise((resolve) => {
-                chrome.storage.local.get(STORAGE_KEYS.CLIPBOARD_FOLDERS, (result) => {
-                    const folders = result[STORAGE_KEYS.CLIPBOARD_FOLDERS] || [];
-                    resolve(this.buildFolderTree(folders));
-                });
-            });
+        try {
+            const items = await this.getClipboardItems();
+            const updatedItems = items.filter(item => item.id !== id);
+            await this.saveClipboardItems(updatedItems);
+            return true;
+        } catch (error) {
+            console.error('Failed to delete clipboard item:', error);
+            return false;
         }
-        const stored = localStorage.getItem(STORAGE_KEYS.CLIPBOARD_FOLDERS) || '[]';
-        const folders = JSON.parse(stored);
-        return this.buildFolderTree(folders);
-    },
+    }
+
+    async getClipboardFolders(): Promise<ClipboardFolder[]> {
+        try {
+            const result = await chrome.storage.local.get(this.STORAGE_KEYS.FOLDERS);
+            return result[this.STORAGE_KEYS.FOLDERS] || [];
+        } catch (error) {
+            console.error('Failed to get clipboard folders:', error);
+            return [];
+        }
+    }
 
     async saveClipboardFolders(folders: ClipboardFolder[]): Promise<void> {
-        const flatFolders = this.flattenFolderTree(folders);
-        if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-            return new Promise((resolve) => {
-                chrome.storage.local.set({ [STORAGE_KEYS.CLIPBOARD_FOLDERS]: flatFolders }, resolve);
-            });
+        try {
+            await chrome.storage.local.set({ [this.STORAGE_KEYS.FOLDERS]: folders });
+        } catch (error) {
+            console.error('Failed to save clipboard folders:', error);
+            throw error;
         }
-        localStorage.setItem(STORAGE_KEYS.CLIPBOARD_FOLDERS, JSON.stringify(flatFolders));
-    },
+    }
 
     async createFolder(name: string, parentId?: string): Promise<ClipboardFolder> {
-        const folders = await this.getClipboardFolders();
         const newFolder: ClipboardFolder = {
-            id: this.generateId(),
+            id: crypto.randomUUID(),
             name,
             parentId,
             children: [],
-            items: [],
+            expanded: true,
             createdAt: Date.now(),
-            expanded: false
+            items: []
         };
+
+        const folders = await this.getClipboardFolders();
 
         if (parentId) {
-            const parent = this.findFolderById(folders, parentId);
-            if (parent) {
-                parent.children.push(newFolder);
-            }
+            // Add as child to parent folder
+            const addToParent = (folderList: ClipboardFolder[]): ClipboardFolder[] => {
+                return folderList.map(folder => {
+                    if (folder.id === parentId) {
+                        return { ...folder, children: [...folder.children, newFolder] };
+                    }
+                    if (folder.children.length > 0) {
+                        return { ...folder, children: addToParent(folder.children) };
+                    }
+                    return folder;
+                });
+            };
+
+            const updatedFolders = addToParent(folders);
+            await this.saveClipboardFolders(updatedFolders);
         } else {
-            folders.push(newFolder);
+            // Add as root folder
+            const updatedFolders = [...folders, newFolder];
+            await this.saveClipboardFolders(updatedFolders);
         }
 
-        await this.saveClipboardFolders(folders);
         return newFolder;
-    },
+    }
 
     async deleteFolder(id: string): Promise<boolean> {
-        const folders = await this.getClipboardFolders();
-        const removed = this.removeFolderById(folders, id);
+        try {
+            const removeFolder = (folderList: ClipboardFolder[]): ClipboardFolder[] => {
+                return folderList
+                    .filter(folder => folder.id !== id)
+                    .map(folder => ({
+                        ...folder,
+                        children: removeFolder(folder.children)
+                    }));
+            };
 
-        if (removed) {
-            await this.saveClipboardFolders(folders);
+            const folders = await this.getClipboardFolders();
+            const updatedFolders = removeFolder(folders);
+            await this.saveClipboardFolders(updatedFolders);
+
+            // Also remove items in this folder
+            const items = await this.getClipboardItems();
+            const updatedItems = items.filter(item => item.folderId !== id);
+            await this.saveClipboardItems(updatedItems);
+
+            return true;
+        } catch (error) {
+            console.error('Failed to delete folder:', error);
+            return false;
         }
-
-        return removed;
-    },
-
-    // Clipboard Snapshots
-    async getClipboardSnapshots(): Promise<ClipboardSnapshot[]> {
-        if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-            return new Promise((resolve) => {
-                chrome.storage.local.get(STORAGE_KEYS.CLIPBOARD_SNAPSHOTS, (result) => {
-                    resolve(result[STORAGE_KEYS.CLIPBOARD_SNAPSHOTS] || []);
-                });
-            });
-        }
-        const stored = localStorage.getItem(STORAGE_KEYS.CLIPBOARD_SNAPSHOTS) || '[]';
-        return JSON.parse(stored);
-    },
-
-    async saveClipboardSnapshots(snapshots: ClipboardSnapshot[]): Promise<void> {
-        if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-            return new Promise((resolve) => {
-                chrome.storage.local.set({ [STORAGE_KEYS.CLIPBOARD_SNAPSHOTS]: snapshots }, resolve);
-            });
-        }
-        localStorage.setItem(STORAGE_KEYS.CLIPBOARD_SNAPSHOTS, JSON.stringify(snapshots));
-    },
-
-    async createSnapshot(name: string, description?: string): Promise<ClipboardSnapshot> {
-        const items = await this.getClipboardItems();
-        const folders = await this.getClipboardFolders();
-
-        const snapshot: ClipboardSnapshot = {
-            id: this.generateId(),
-            name,
-            description,
-            items: [...items],
-            folders: [...folders],
-            createdAt: Date.now()
-        };
-
-        const snapshots = await this.getClipboardSnapshots();
-        snapshots.unshift(snapshot);
-        await this.saveClipboardSnapshots(snapshots);
-
-        return snapshot;
-    },
-
-    // Helper methods
-    buildFolderTree(folders: any[]): ClipboardFolder[] {
-        const folderMap = new Map<string, ClipboardFolder>();
-        const rootFolders: ClipboardFolder[] = [];
-
-        // Create folder map
-        folders.forEach(folder => {
-            folderMap.set(folder.id, { ...folder, children: [], items: [] });
-        });
-
-        // Build tree structure
-        folders.forEach(folder => {
-            const folderNode = folderMap.get(folder.id)!;
-            if (folder.parentId && folderMap.has(folder.parentId)) {
-                folderMap.get(folder.parentId)!.children.push(folderNode);
-            } else {
-                rootFolders.push(folderNode);
-            }
-        });
-
-        return rootFolders;
-    },
-
-    flattenFolderTree(folders: ClipboardFolder[]): any[] {
-        const result: any[] = [];
-
-        const flatten = (folder: ClipboardFolder) => {
-            result.push({
-                id: folder.id,
-                name: folder.name,
-                parentId: folder.parentId,
-                createdAt: folder.createdAt,
-                expanded: folder.expanded
-            });
-            folder.children.forEach(flatten);
-        };
-
-        folders.forEach(flatten);
-        return result;
-    },
-
-    findFolderById(folders: ClipboardFolder[], id: string): ClipboardFolder | null {
-        for (const folder of folders) {
-            if (folder.id === id) return folder;
-            const found = this.findFolderById(folder.children, id);
-            if (found) return found;
-        }
-        return null;
-    },
-
-    removeFolderById(folders: ClipboardFolder[], id: string): boolean {
-        for (let i = 0; i < folders.length; i++) {
-            if (folders[i].id === id) {
-                folders.splice(i, 1);
-                return true;
-            }
-            if (this.removeFolderById(folders[i].children, id)) {
-                return true;
-            }
-        }
-        return false;
-    },
-
-    generateId(): string {
-        return Math.random().toString(36).substring(2) + Date.now().toString(36);
     }
-};
+}
+
+export const clipboardStorage = new ClipboardStorage();

@@ -2,69 +2,42 @@
   "manifest_version": 3,
   "name": "ShortcutPaste",
   "version": "1.0.0",
-  "description": "Quick paste snippets and clipboard items",
+  "description": "Quick paste favorite clipboard item",
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
-    "bookmarks",
     "clipboardRead",
-    "clipboardWrite",
-    "identity"
+    "clipboardWrite"
   ],
   "background": {
-    "service_worker": "src/background/service-worker.ts",
-    "type": "module"
+    "service_worker": "serviceWorker.js"
   },
-  "content_scripts": [
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' https://tasks.googleapis.com https://www.googleapis.com https://sheets.googleapis.com https://api.open-meteo.com https://oauth2.googleapis.com https://*.gstatic.com https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://server.arcgisonline.com;"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ShortcutPaste"
+  },
+  "web_accessible_resources": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/content-scripts/content-main.ts"],
-      "run_at": "document_end"
+      "resources": [
+        "content-main.js",
+        "assets/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
-  "action": {
-    "default_popup": "src/presentation/popup.html"
-  },
   "commands": {
-    "open_snippet_overlay": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+Space",
-        "mac": "Command+Shift+Space"
-      },
-      "description": "Open snippet overlay"
-    },
     "paste_favorite_clipboard": {
       "suggested_key": {
-        "default": "Ctrl+Alt+V",
-        "mac": "Command+Alt+V"
+        "default": "Alt+Shift+V",
+        "mac": "Alt+Shift+V"
       },
       "description": "Paste favorite clipboard item"
-    },
-    "paste_snippet_1": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+1",
-        "mac": "Command+Shift+1"
-      },
-      "description": "Paste snippet 1"
-    },
-    "paste_snippet_2": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+2",
-        "mac": "Command+Shift+2"
-      },
-      "description": "Paste snippet 2"
-    },
-    "paste_snippet_3": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+3",
-        "mac": "Command+Shift+3"
-      },
-      "description": "Paste snippet 3"
     }
-  },
-  "oauth2": {
-    "client_id": "YOUR_OAUTH_CLIENT_ID",
-    "scopes": ["https://www.googleapis.com/auth/userinfo.email"]
   }
 }

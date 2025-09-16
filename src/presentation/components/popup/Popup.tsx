@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import ClipboardTreeView from "./ClipboardTreeView";
 import ClipboardContentViewer from "./ClipboardContentViewer";
 import CreateClipboardItemModal from "./CreateClipboardItemModal";
-import { ClipboardFolder, ClipboardItem } from "@/types/clipboard";
+import { ClipboardFolder, ClipboardItem } from "../../../types/clipboard";
 import { clipboardStorage } from "@/shared/utils/clipboard-storage";
 import {
   Search,
@@ -11,7 +11,6 @@ import {
   Loader,
   AlertCircle,
   Plus,
-  Star,
   X,
   Keyboard,
 } from "lucide-react";
@@ -325,9 +324,7 @@ const Popup: React.FC = () => {
       <div className="p-2 bg-sidebar-background text-xs text-text-secondary border-b border-border-default">
         <div className="flex items-center gap-1 justify-center">
           <Keyboard size={12} />
-          <span>
-            Shortcuts: Ctrl+Shift+Space (Overlay), Ctrl+Alt+V (Paste Favorite)
-          </span>
+          <span>Shortcut: Ctrl+Alt+V (Paste Favorite)</span>
         </div>
       </div>
 

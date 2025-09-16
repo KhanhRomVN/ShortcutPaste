@@ -13,7 +13,7 @@ import {
   X,
   Heart,
 } from "lucide-react";
-import { ClipboardItem } from "@/types/clipboard";
+import { ClipboardItem } from "../../../types/clipboard";
 
 interface ClipboardContentViewerProps {
   item: ClipboardItem | null;

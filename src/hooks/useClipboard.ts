@@ -1,7 +1,7 @@
 // src/hooks/useClipboard.ts
 
 import { useState, useEffect, useCallback } from 'react';
-import { ClipboardItem, ClipboardFolder } from '@/types/clipboard';
+import { ClipboardItem, ClipboardFolder } from '../types/clipboard';
 import { clipboardStorage } from '@/shared/utils/clipboard-storage';
 
 export const useClipboard = () => {

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   Folder,
   FolderOpen,
@@ -10,13 +10,11 @@ import {
   Copy,
   MoreHorizontal,
   Trash2,
-  Edit3,
   Plus,
   FolderPlus,
-  Star,
   Heart,
 } from "lucide-react";
-import { ClipboardFolder, ClipboardItem } from "@/types/clipboard";
+import { ClipboardFolder, ClipboardItem } from "../../../types/clipboard";
 
 interface ClipboardTreeViewProps {
   folders: ClipboardFolder[];
@@ -43,8 +41,6 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
   onToggleFavorite,
   onCreateItemInFolder,
 }) => {
-  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
-  const [newFolderName, setNewFolderName] = useState("");
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;

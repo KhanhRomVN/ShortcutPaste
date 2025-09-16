@@ -21,12 +21,3 @@ export interface ClipboardFolder {
     createdAt: number;
     expanded: boolean;
 }
-
-export interface ClipboardSnapshot {
-    id: string;
-    name: string;
-    items: ClipboardItem[];
-    folders: ClipboardFolder[];
-    createdAt: number;
-    description?: string;
-}
