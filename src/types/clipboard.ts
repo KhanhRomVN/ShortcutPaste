@@ -9,6 +9,7 @@ export interface ClipboardItem {
     folderId?: string;
     size: number;
     preview?: string;
+    isFavorite?: boolean; // New favorite property
 }
 
 export interface ClipboardFolder {

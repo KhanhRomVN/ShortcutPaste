@@ -1,5 +1,3 @@
-// src/presentation/components/popup/clipboard/ClipboardContentViewer.tsx
-
 import React, { useState } from "react";
 import {
   Copy,
@@ -13,6 +11,7 @@ import {
   Edit3,
   Save,
   X,
+  Heart,
 } from "lucide-react";
 import { ClipboardItem } from "@/types/clipboard";
 
@@ -20,12 +19,14 @@ interface ClipboardContentViewerProps {
   item: ClipboardItem | null;
   onCopyToClipboard: (content: string) => void;
   onUpdateItem?: (id: string, updates: Partial<ClipboardItem>) => void;
+  onToggleFavorite?: (id: string) => void;
 }
 
 const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
   item,
   onCopyToClipboard,
   onUpdateItem,
+  onToggleFavorite,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -34,10 +35,10 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
 
   if (!item) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-card-background rounded-lg">
+      <div className="flex-1 flex items-center justify-center rounded-lg">
         <div className="text-center text-text-secondary">
-          <FileText size={48} className="mx-auto mb-4 opacity-50" />
-          <p className="text-lg font-medium mb-2">No item selected</p>
+          <FileText size={40} className="mx-auto mb-3 opacity-50" />
+          <p className="text-base font-medium mb-1">No item selected</p>
           <p className="text-sm">Select a clipboard item to view its content</p>
         </div>
       </div>
@@ -57,13 +58,13 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
   const getItemIcon = () => {
     switch (item.type) {
       case "image":
-        return <Image size={20} className="text-blue-500" />;
+        return <Image size={18} className="text-blue-500" />;
       case "url":
-        return <Link size={20} className="text-green-500" />;
+        return <Link size={18} className="text-green-500" />;
       case "html":
-        return <FileText size={20} className="text-orange-500" />;
+        return <FileText size={18} className="text-orange-500" />;
       default:
-        return <FileText size={20} className="text-gray-500" />;
+        return <FileText size={18} className="text-gray-500" />;
     }
   };
 
@@ -111,21 +112,27 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
     }
   };
 
+  const handleToggleFavorite = () => {
+    if (onToggleFavorite) {
+      onToggleFavorite(item.id);
+    }
+  };
+
   const renderContent = () => {
     const content = isEditing ? editContent : item.content;
 
     if (item.type === "image" && content.startsWith("data:image")) {
       return (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <img
             src={content}
             alt={item.title}
-            className="max-w-full max-h-96 object-contain rounded-lg border border-border-default"
+            className="max-w-full max-h-72 object-contain rounded border border-border-default"
           />
           {showRawContent && (
-            <div className="bg-input-background rounded-lg p-3">
-              <pre className="text-xs text-text-secondary whitespace-pre-wrap break-all">
-                {content.substring(0, 200)}...
+            <div className="bg-input-background rounded p-3 text-xs">
+              <pre className="text-text-secondary whitespace-pre-wrap break-all">
+                {content.substring(0, 150)}...
               </pre>
             </div>
           )}
@@ -135,9 +142,9 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
 
     if (item.type === "html" && !showRawContent) {
       return (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div
-            className="bg-white rounded-lg border border-border-default p-4 max-h-96 overflow-auto"
+            className="bg-white rounded border border-border-default p-3 max-h-72 overflow-auto text-sm"
             dangerouslySetInnerHTML={{ __html: content }}
           />
           <button
@@ -152,16 +159,16 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
     }
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {isEditing ? (
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            className="w-full h-64 p-3 border border-border-default rounded-lg bg-input-background text-text-primary font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full h-56 p-3 border border-border-default rounded bg-input-background text-text-primary font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
             placeholder="Content..."
           />
         ) : (
-          <div className="bg-input-background rounded-lg p-4 max-h-96 overflow-auto">
+          <div className="bg-input-background rounded p-3 max-h-72 overflow-auto">
             <pre className="whitespace-pre-wrap break-words text-sm font-mono text-text-primary">
               {content}
             </pre>
@@ -182,25 +189,33 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
   };
 
   return (
-    <div className="flex-1 bg-card-background rounded-lg p-6 overflow-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
+    <div className="flex-1 bg-card-background rounded p-4 overflow-auto max-w-2xl">
+      {/* Header - More compact */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start gap-2 flex-1 min-w-0">
           {getItemIcon()}
           <div className="flex-1 min-w-0">
             {isEditing ? (
               <input
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full text-lg font-semibold bg-input-background border border-border-default rounded px-2 py-1 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full text-base font-semibold bg-input-background border border-border-default rounded px-2 py-1 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Title..."
               />
             ) : (
-              <h2 className="text-lg font-semibold text-text-primary truncate">
-                {item.title}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-text-primary truncate">
+                  {item.title}
+                </h2>
+                {item.isFavorite && (
+                  <Heart
+                    size={14}
+                    className="text-red-500 fill-current flex-shrink-0"
+                  />
+                )}
+              </div>
             )}
-            <div className="flex items-center gap-4 mt-2 text-sm text-text-secondary">
+            <div className="flex items-center gap-3 mt-1 text-xs text-text-secondary">
               <span>{formatTime(item.timestamp)}</span>
               <span>•</span>
               <span>{formatFileSize(item.size)}</span>
@@ -210,22 +225,22 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 ml-4">
+        {/* Actions - More compact buttons */}
+        <div className="flex items-center gap-1 ml-3">
           {isEditing ? (
             <>
               <button
                 onClick={handleSaveEdit}
-                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 bg-primary text-white text-xs rounded hover:bg-primary/90 transition-colors"
               >
-                <Save size={14} />
+                <Save size={12} />
                 Save
               </button>
               <button
                 onClick={handleCancelEdit}
-                className="flex items-center gap-2 px-3 py-1.5 bg-button-second-bg text-text-primary text-sm rounded-lg hover:bg-button-second-bg-hover transition-colors"
+                className="flex items-center gap-1 px-2 py-1 bg-button-second-bg text-text-primary text-xs rounded hover:bg-button-second-bg-hover transition-colors"
               >
-                <X size={14} />
+                <X size={12} />
                 Cancel
               </button>
             </>
@@ -233,37 +248,57 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
             <>
               <button
                 onClick={() => onCopyToClipboard(item.content)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 bg-primary text-white text-xs rounded hover:bg-primary/90 transition-colors"
+                title="Copy to clipboard"
               >
-                <Copy size={14} />
+                <Copy size={12} />
                 Copy
               </button>
+
+              {onToggleFavorite && (
+                <button
+                  onClick={handleToggleFavorite}
+                  className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
+                    item.isFavorite
+                      ? "bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400"
+                      : "bg-button-second-bg hover:bg-button-second-bg-hover text-text-primary"
+                  }`}
+                  title={
+                    item.isFavorite ? "Remove favorite" : "Set as favorite"
+                  }
+                >
+                  <Heart
+                    size={12}
+                    className={item.isFavorite ? "fill-current" : ""}
+                  />
+                </button>
+              )}
 
               {onUpdateItem && (
                 <button
                   onClick={handleStartEdit}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-button-second-bg text-text-primary text-sm rounded-lg hover:bg-button-second-bg-hover transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-button-second-bg text-text-primary text-xs rounded hover:bg-button-second-bg-hover transition-colors"
+                  title="Edit item"
                 >
-                  <Edit3 size={14} />
-                  Edit
+                  <Edit3 size={12} />
                 </button>
               )}
 
               <button
                 onClick={handleDownload}
-                className="flex items-center gap-2 px-3 py-1.5 bg-button-second-bg text-text-primary text-sm rounded-lg hover:bg-button-second-bg-hover transition-colors"
+                className="flex items-center gap-1 px-2 py-1 bg-button-second-bg text-text-primary text-xs rounded hover:bg-button-second-bg-hover transition-colors"
+                title="Download as text file"
               >
-                <Download size={14} />
-                Download
+                <Download size={12} />
               </button>
 
               {item.type === "url" && (
                 <button
                   onClick={handleOpenUrl}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-button-second-bg text-text-primary text-sm rounded-lg hover:bg-button-second-bg-hover transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-button-second-bg text-text-primary text-xs rounded hover:bg-button-second-bg-hover transition-colors"
+                  title="Open URL in new tab"
                 >
-                  <ExternalLink size={14} />
-                  Open
+                  <ExternalLink size={12} />
                 </button>
               )}
             </>
@@ -271,7 +306,7 @@ const ClipboardContentViewer: React.FC<ClipboardContentViewerProps> = ({
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content - More compact */}
       {renderContent()}
     </div>
   );

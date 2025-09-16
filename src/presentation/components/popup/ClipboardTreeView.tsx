@@ -1,5 +1,3 @@
-// src/presentation/components/popup/clipboard/ClipboardTreeView.tsx
-
 import React, { useState, useCallback } from "react";
 import {
   Folder,
@@ -15,6 +13,8 @@ import {
   Edit3,
   Plus,
   FolderPlus,
+  Star,
+  Heart,
 } from "lucide-react";
 import { ClipboardFolder, ClipboardItem } from "@/types/clipboard";
 
@@ -27,6 +27,8 @@ interface ClipboardTreeViewProps {
   onDeleteFolder: (id: string) => void;
   onCreateFolder: (name: string, parentId?: string) => void;
   onToggleFolder: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
+  onCreateItemInFolder?: (folderId?: string) => void;
 }
 
 const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
@@ -38,6 +40,8 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
   onDeleteFolder,
   onCreateFolder,
   onToggleFolder,
+  onToggleFavorite,
+  onCreateItemInFolder,
 }) => {
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
@@ -80,6 +84,30 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
     return "Just now";
   };
 
+  // Calculate total storage usage
+  const calculateStorageInfo = () => {
+    const totalBytes = items.reduce((sum, item) => sum + item.size, 0);
+    const maxBytes = 5 * 1024 * 1024; // 5MB limit for example
+    const usagePercentage = (totalBytes / maxBytes) * 100;
+
+    return {
+      used: totalBytes,
+      max: maxBytes,
+      percentage: Math.min(usagePercentage, 100),
+      formattedUsed: formatFileSize(totalBytes),
+      formattedMax: formatFileSize(maxBytes),
+    };
+  };
+
+  const storageInfo = calculateStorageInfo();
+
+  // Sort items: favorites first, then by timestamp
+  const sortedItems = [...items].sort((a, b) => {
+    if (a.isFavorite && !b.isFavorite) return -1;
+    if (!a.isFavorite && b.isFavorite) return 1;
+    return b.timestamp - a.timestamp;
+  });
+
   const handleContextMenu = (
     e: React.MouseEvent,
     type: "item" | "folder",
@@ -107,8 +135,17 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
     closeContextMenu();
   };
 
+  const handleCreateItemInFolder = (folderId?: string) => {
+    if (onCreateItemInFolder) {
+      onCreateItemInFolder(folderId);
+    }
+    closeContextMenu();
+  };
+
   const renderFolder = (folder: ClipboardFolder, level = 0) => {
-    const folderItems = items.filter((item) => item.folderId === folder.id);
+    const folderItems = sortedItems.filter(
+      (item) => item.folderId === folder.id
+    );
     const hasItems = folderItems.length > 0 || folder.children.length > 0;
 
     return (
@@ -161,7 +198,7 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
             {folderItems.map((item) => (
               <div
                 key={item.id}
-                className={`flex items-center py-2 px-2 hover:bg-sidebar-item-hover rounded cursor-pointer group ${
+                className={`flex items-center py-2 px-2 hover:bg-sidebar-item-hover rounded cursor-pointer group relative ${
                   selectedItemId === item.id
                     ? "bg-primary/10 border-l-2 border-primary"
                     : ""
@@ -171,9 +208,11 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
                 onContextMenu={(e) => handleContextMenu(e, "item", item)}
               >
                 {getItemIcon(item.type)}
-                <div className="flex-1 ml-2 min-w-0">
-                  <div className="text-sm font-medium truncate">
-                    {item.title}
+                <div className="flex-1 ml-2 min-w-0 pr-6">
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-medium truncate">
+                      {item.title}
+                    </span>
                   </div>
                   <div className="text-xs text-text-secondary flex items-center gap-2">
                     <span>{formatFileSize(item.size)}</span>
@@ -181,6 +220,13 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
                     <span>{formatTime(item.timestamp)}</span>
                   </div>
                 </div>
+
+                {/* Favorite heart icon - positioned absolutely */}
+                {item.isFavorite && (
+                  <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
+                    <Heart size={14} className="text-red-500 fill-current" />
+                  </div>
+                )}
 
                 <button
                   onClick={(e) => {
@@ -200,12 +246,12 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
   };
 
   const renderRootItems = () => {
-    const rootItems = items.filter((item) => !item.folderId);
+    const rootItems = sortedItems.filter((item) => !item.folderId);
 
     return rootItems.map((item) => (
       <div
         key={item.id}
-        className={`flex items-center py-2 px-2 hover:bg-sidebar-item-hover rounded cursor-pointer group ${
+        className={`flex items-center py-2 px-2 hover:bg-sidebar-item-hover rounded cursor-pointer group relative ${
           selectedItemId === item.id
             ? "bg-primary/10 border-l-2 border-primary"
             : ""
@@ -214,14 +260,23 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
         onContextMenu={(e) => handleContextMenu(e, "item", item)}
       >
         {getItemIcon(item.type)}
-        <div className="flex-1 ml-2 min-w-0">
-          <div className="text-sm font-medium truncate">{item.title}</div>
+        <div className="flex-1 ml-2 min-w-0 pr-6">
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-medium truncate">{item.title}</span>
+          </div>
           <div className="text-xs text-text-secondary flex items-center gap-2">
             <span>{formatFileSize(item.size)}</span>
             <span>•</span>
             <span>{formatTime(item.timestamp)}</span>
           </div>
         </div>
+
+        {/* Favorite heart icon - positioned absolutely */}
+        {item.isFavorite && (
+          <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
+            <Heart size={14} className="text-red-500 fill-current" />
+          </div>
+        )}
 
         <button
           onClick={(e) => {
@@ -237,9 +292,9 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
   };
 
   return (
-    <div className="h-full overflow-y-auto">
-      {/* Create Folder Button */}
-      <div className="p-2 border-b border-border-default">
+    <div className="h-full overflow-y-auto flex flex-col">
+      {/* Create Folder Button & Storage Info */}
+      <div className="p-2 border-b border-border-default space-y-3">
         <button
           onClick={() => handleCreateNewFolder()}
           className="flex items-center gap-2 w-full px-3 py-2 text-sm bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors"
@@ -247,10 +302,35 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
           <FolderPlus size={14} />
           New Folder
         </button>
+
+        {/* Storage Usage */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-text-secondary">
+            <span>Storage Usage</span>
+            <span>
+              {storageInfo.formattedUsed} / {storageInfo.formattedMax}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div
+              className={`h-2 rounded-full transition-all duration-300 ${
+                storageInfo.percentage > 90
+                  ? "bg-red-500"
+                  : storageInfo.percentage > 70
+                  ? "bg-yellow-500"
+                  : "bg-primary"
+              }`}
+              style={{ width: `${storageInfo.percentage}%` }}
+            />
+          </div>
+          <div className="text-xs text-text-secondary">
+            {storageInfo.percentage.toFixed(1)}% used
+          </div>
+        </div>
       </div>
 
       {/* Tree Content */}
-      <div className="p-2 space-y-1">
+      <div className="flex-1 p-2 space-y-1 overflow-y-auto">
         {/* Render folders */}
         {folders.map((folder) => renderFolder(folder))}
 
@@ -261,7 +341,7 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
       {/* Context Menu */}
       {contextMenu && (
         <div
-          className="fixed bg-dropdown-background border border-border-default rounded-lg shadow-lg py-1 z-50"
+          className="fixed bg-dropdown-background border border-border-default rounded-lg shadow-lg py-1 z-50 min-w-[180px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={closeContextMenu}
         >
@@ -281,6 +361,25 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
               </button>
               <button
                 onClick={() => {
+                  onToggleFavorite((contextMenu.target as ClipboardItem).id);
+                  closeContextMenu();
+                }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-dropdown-item-hover"
+              >
+                <Heart
+                  size={14}
+                  className={
+                    (contextMenu.target as ClipboardItem).isFavorite
+                      ? "text-red-500 fill-current"
+                      : "text-text-secondary"
+                  }
+                />
+                {(contextMenu.target as ClipboardItem).isFavorite
+                  ? "Remove Favorite"
+                  : "Set as Favorite"}
+              </button>
+              <button
+                onClick={() => {
                   onDeleteItem((contextMenu.target as ClipboardItem).id);
                   closeContextMenu();
                 }}
@@ -292,6 +391,17 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
             </>
           ) : (
             <>
+              <button
+                onClick={() =>
+                  handleCreateItemInFolder(
+                    (contextMenu.target as ClipboardFolder).id
+                  )
+                }
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-dropdown-item-hover"
+              >
+                <Plus size={14} />
+                Create Clipboard Item
+              </button>
               <button
                 onClick={() =>
                   handleCreateNewFolder(

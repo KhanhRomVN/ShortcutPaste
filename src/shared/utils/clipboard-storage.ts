@@ -34,7 +34,8 @@ export const clipboardStorage = {
         const newItem: ClipboardItem = {
             ...item,
             id: this.generateId(),
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            isFavorite: item.isFavorite || false
         };
         items.unshift(newItem);
 

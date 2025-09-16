@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
 import ClipboardTreeView from "./ClipboardTreeView";
 import ClipboardContentViewer from "./ClipboardContentViewer";
+import CreateClipboardItemModal from "./CreateClipboardItemModal";
 import { ClipboardFolder, ClipboardItem } from "@/types/clipboard";
 import { clipboardStorage } from "@/shared/utils/clipboard-storage";
 import {
   Search,
   Filter,
-  Camera,
   RefreshCw,
-  Settings,
   Loader,
   AlertCircle,
+  Plus,
+  Star,
+  X,
 } from "lucide-react";
 
 const Popup: React.FC = () => {
@@ -21,36 +23,16 @@ const Popup: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<
-    "all" | "text" | "image" | "url" | "html"
+    "all" | "text" | "image" | "url" | "html" | "favorite"
   >("all");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createModalFolderId, setCreateModalFolderId] = useState<
+    string | undefined
+  >(undefined);
 
   // Load data on component mount
   useEffect(() => {
     loadClipboardData();
-  }, []);
-
-  // Listen for clipboard changes
-  useEffect(() => {
-    const handleClipboardChange = async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text.trim()) {
-          await addClipboardItem({
-            content: text,
-            type: detectContentType(text),
-            title: generateTitle(text),
-            size: new Blob([text]).size,
-          });
-          loadClipboardData();
-        }
-      } catch (error) {
-        // Clipboard access failed, ignore
-      }
-    };
-
-    // Check clipboard every 2 seconds when popup is active
-    const interval = setInterval(handleClipboardChange, 2000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadClipboardData = async () => {
@@ -82,20 +64,6 @@ const Popup: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const detectContentType = (content: string): ClipboardItem["type"] => {
-    if (content.startsWith("data:image/")) return "image";
-    if (content.startsWith("http://") || content.startsWith("https://"))
-      return "url";
-    if (content.includes("<") && content.includes(">")) return "html";
-    return "text";
-  };
-
-  const generateTitle = (content: string, maxLength = 50): string => {
-    const firstLine = content.split("\n")[0].trim();
-    if (firstLine.length <= maxLength) return firstLine;
-    return firstLine.substring(0, maxLength) + "...";
   };
 
   const addClipboardItem = async (
@@ -174,7 +142,6 @@ const Popup: React.FC = () => {
   const handleCopyToClipboard = async (content: string) => {
     try {
       await navigator.clipboard.writeText(content);
-      // You could add a toast notification here
     } catch (err) {
       setError("Failed to copy to clipboard");
     }
@@ -199,42 +166,51 @@ const Popup: React.FC = () => {
     }
   };
 
-  const handleCaptureScreenshot = async () => {
+  const handleToggleFavorite = async (id: string) => {
     try {
-      // Request screen capture
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-      });
-      const video = document.createElement("video");
+      // First, remove favorite from all other items
+      const updatedItems = items.map((item) => ({
+        ...item,
+        isFavorite: item.id === id ? !item.isFavorite : false,
+      }));
 
-      video.srcObject = stream;
-      video.play();
+      setItems(updatedItems);
+      await clipboardStorage.saveClipboardItems(updatedItems);
 
-      video.addEventListener("loadedmetadata", () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(video, 0, 0);
-
-        // Stop the stream
-        stream.getTracks().forEach((track) => track.stop());
-
-        // Convert to data URL
-        const dataURL = canvas.toDataURL("image/png");
-
-        // Add as clipboard item
-        addClipboardItem({
-          content: dataURL,
-          type: "image",
-          title: `Screenshot ${new Date().toLocaleString()}`,
-          size: dataURL.length,
+      if (selectedItem?.id === id) {
+        setSelectedItem({
+          ...selectedItem,
+          isFavorite: !selectedItem.isFavorite,
         });
-      });
+      }
     } catch (err) {
-      setError("Failed to capture screenshot");
+      setError(
+        err instanceof Error ? err.message : "Failed to toggle favorite"
+      );
     }
+  };
+
+  const handleCreateItem = async (itemData: {
+    title: string;
+    content: string;
+    type: ClipboardItem["type"];
+    folderId?: string;
+  }) => {
+    const newItem = await addClipboardItem({
+      ...itemData,
+      size: new Blob([itemData.content]).size,
+    });
+
+    if (newItem) {
+      setShowCreateModal(false);
+      setCreateModalFolderId(undefined);
+      setSelectedItem(newItem);
+    }
+  };
+
+  const handleCreateItemInFolder = (folderId?: string) => {
+    setCreateModalFolderId(folderId);
+    setShowCreateModal(true);
   };
 
   // Filter items based on search and type
@@ -244,7 +220,9 @@ const Popup: React.FC = () => {
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.content.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesType = filterType === "all" || item.type === filterType;
+    const matchesType =
+      filterType === "all" ||
+      (filterType === "favorite" ? item.isFavorite : item.type === filterType);
 
     return matchesSearch && matchesType;
   });
@@ -264,15 +242,15 @@ const Popup: React.FC = () => {
     <div className="w-[800px] h-[600px] bg-drawer-background text-text-primary flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border-default">
-        <h1 className="text-xl font-semibold">Clipboard Manager</h1>
+        <h1 className="text-xl font-semibold">ShortcutPaste</h1>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={handleCaptureScreenshot}
-            className="flex items-center gap-2 px-3 py-1.5 bg-button-second-bg hover:bg-button-second-bg-hover rounded-lg text-sm transition-colors"
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm transition-colors"
           >
-            <Camera size={14} />
-            Screenshot
+            <Plus size={14} />
+            Create Item
           </button>
 
           <button
@@ -287,7 +265,7 @@ const Popup: React.FC = () => {
             onClick={() => window.close()}
             className="flex items-center gap-2 px-3 py-1.5 bg-button-second-bg hover:bg-button-second-bg-hover rounded-lg text-sm transition-colors"
           >
-            <Settings size={14} />
+            <X size={14} />
             Close
           </button>
         </div>
@@ -321,6 +299,7 @@ const Popup: React.FC = () => {
             <option value="image">Images</option>
             <option value="url">URLs</option>
             <option value="html">HTML</option>
+            <option value="favorite">Favorites</option>
           </select>
         </div>
       </div>
@@ -344,7 +323,7 @@ const Popup: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Tree View */}
-        <div className="w-80 border-r border-border-default bg-sidebar-background">
+        <div className="w-72 border-r border-border-default bg-sidebar-background">
           <ClipboardTreeView
             folders={folders}
             items={filteredItems}
@@ -354,15 +333,18 @@ const Popup: React.FC = () => {
             onDeleteFolder={handleDeleteFolder}
             onCreateFolder={handleCreateFolder}
             onToggleFolder={handleToggleFolder}
+            onToggleFavorite={handleToggleFavorite}
+            onCreateItemInFolder={handleCreateItemInFolder}
           />
         </div>
 
         {/* Right Panel - Content Viewer */}
-        <div className="flex-1 p-4">
+        <div className="flex-1 p-3 flex">
           <ClipboardContentViewer
             item={selectedItem}
             onCopyToClipboard={handleCopyToClipboard}
             onUpdateItem={handleUpdateItem}
+            onToggleFavorite={handleToggleFavorite}
           />
         </div>
       </div>
@@ -372,6 +354,19 @@ const Popup: React.FC = () => {
         <span>{filteredItems.length} items</span>
         <span>Last updated: {new Date().toLocaleTimeString()}</span>
       </div>
+
+      {/* Create Item Modal */}
+      {showCreateModal && (
+        <CreateClipboardItemModal
+          folders={folders}
+          onCreateItem={handleCreateItem}
+          onClose={() => {
+            setShowCreateModal(false);
+            setCreateModalFolderId(undefined);
+          }}
+          initialFolderId={createModalFolderId}
+        />
+      )}
     </div>
   );
 };
