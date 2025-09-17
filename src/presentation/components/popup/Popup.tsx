@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import ClipboardTreeView from "./ClipboardTreeView";
 import ClipboardContentViewer from "./ClipboardContentViewer";
 import CreateClipboardItemModal from "./CreateClipboardItemModal";
-import LogCollector from "../common/LogCollector";
 import { ClipboardFolder, ClipboardItem } from "../../../types/clipboard";
 import { clipboardStorage } from "@/shared/utils/clipboard-storage";
 import { logger } from "@/shared/utils/logger";
@@ -14,8 +13,6 @@ import {
   AlertCircle,
   Plus,
   X,
-  Keyboard,
-  Bug,
 } from "lucide-react";
 
 const Popup: React.FC = () => {
@@ -32,7 +29,6 @@ const Popup: React.FC = () => {
   const [createModalFolderId, setCreateModalFolderId] = useState<
     string | undefined
   >(undefined);
-  const [showLogs, setShowLogs] = useState(false);
 
   // Load data on component mount
   useEffect(() => {
@@ -282,15 +278,6 @@ const Popup: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowLogs(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-button-second-bg hover:bg-button-second-bg-hover rounded-lg text-sm transition-colors"
-            title="View logs"
-          >
-            <Bug size={14} />
-            Logs
-          </button>
-
-          <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm transition-colors"
           >
@@ -411,11 +398,6 @@ const Popup: React.FC = () => {
           }}
           initialFolderId={createModalFolderId}
         />
-      )}
-
-      {/* Log Collector Modal */}
-      {showLogs && (
-        <LogCollector isOpen={showLogs} onClose={() => setShowLogs(false)} />
       )}
     </div>
   );
