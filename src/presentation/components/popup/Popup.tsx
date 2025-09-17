@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import ClipboardTreeView from "./ClipboardTreeView";
 import ClipboardContentViewer from "./ClipboardContentViewer";
 import CreateClipboardItemModal from "./CreateClipboardItemModal";
+import LogCollector from "../common/LogCollector";
 import { ClipboardFolder, ClipboardItem } from "../../../types/clipboard";
 import { clipboardStorage } from "@/shared/utils/clipboard-storage";
+import { logger } from "@/shared/utils/logger";
 import {
   Search,
   Filter,
@@ -13,6 +15,7 @@ import {
   Plus,
   X,
   Keyboard,
+  Bug,
 } from "lucide-react";
 
 const Popup: React.FC = () => {
@@ -29,16 +32,19 @@ const Popup: React.FC = () => {
   const [createModalFolderId, setCreateModalFolderId] = useState<
     string | undefined
   >(undefined);
+  const [showLogs, setShowLogs] = useState(false);
 
   // Load data on component mount
   useEffect(() => {
     loadClipboardData();
+    logger.info("Popup component mounted");
   }, []);
 
   const loadClipboardData = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      logger.info("Loading clipboard data...");
 
       const [loadedFolders, loadedItems] = await Promise.all([
         clipboardStorage.getClipboardFolders(),
@@ -47,6 +53,9 @@ const Popup: React.FC = () => {
 
       setFolders(loadedFolders);
       setItems(loadedItems);
+      logger.info(
+        `Loaded ${loadedItems.length} items and ${loadedFolders.length} folders`
+      );
 
       // If an item was selected and still exists, keep it selected
       if (selectedItem) {
@@ -55,12 +64,14 @@ const Popup: React.FC = () => {
         );
         if (!stillExists) {
           setSelectedItem(null);
+          logger.debug("Previously selected item no longer exists");
         }
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load clipboard data"
-      );
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to load clipboard data";
+      setError(errorMsg);
+      logger.error("Failed to load clipboard data", err);
     } finally {
       setIsLoading(false);
     }
@@ -72,17 +83,20 @@ const Popup: React.FC = () => {
     try {
       const newItem = await clipboardStorage.addClipboardItem(itemData);
       setItems((prev) => [newItem, ...prev.slice(0, 999)]);
+      logger.info(`Added new clipboard item: ${newItem.title}`);
       return newItem;
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to add clipboard item"
-      );
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to add clipboard item";
+      setError(errorMsg);
+      logger.error("Failed to add clipboard item", err);
       return null;
     }
   };
 
   const handleSelectItem = (item: ClipboardItem) => {
     setSelectedItem(item);
+    logger.debug(`Selected item: ${item.title}`);
   };
 
   const handleDeleteItem = async (id: string) => {
@@ -93,9 +107,13 @@ const Popup: React.FC = () => {
         if (selectedItem?.id === id) {
           setSelectedItem(null);
         }
+        logger.info(`Deleted clipboard item: ${id}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete item");
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to delete item";
+      setError(errorMsg);
+      logger.error("Failed to delete item", err);
     }
   };
 
@@ -104,9 +122,13 @@ const Popup: React.FC = () => {
       const success = await clipboardStorage.deleteFolder(id);
       if (success) {
         await loadClipboardData(); // Reload to update tree structure
+        logger.info(`Deleted folder: ${id}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete folder");
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to delete folder";
+      setError(errorMsg);
+      logger.error("Failed to delete folder", err);
     }
   };
 
@@ -114,8 +136,12 @@ const Popup: React.FC = () => {
     try {
       await clipboardStorage.createFolder(name, parentId);
       await loadClipboardData(); // Reload to update tree structure
+      logger.info(`Created folder: ${name}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create folder");
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to create folder";
+      setError(errorMsg);
+      logger.error("Failed to create folder", err);
     }
   };
 
@@ -137,13 +163,16 @@ const Popup: React.FC = () => {
     const updatedFolders = updateFolderExpanded(folders);
     setFolders(updatedFolders);
     await clipboardStorage.saveClipboardFolders(updatedFolders);
+    logger.debug(`Toggled folder: ${id}`);
   };
 
   const handleCopyToClipboard = async (content: string) => {
     try {
       await navigator.clipboard.writeText(content);
+      logger.info("Content copied to clipboard");
     } catch (err) {
       setError("Failed to copy to clipboard");
+      logger.error("Failed to copy to clipboard", err);
     }
   };
 
@@ -161,8 +190,12 @@ const Popup: React.FC = () => {
       if (selectedItem?.id === id) {
         setSelectedItem({ ...selectedItem, ...updates });
       }
+      logger.info(`Updated item: ${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update item");
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to update item";
+      setError(errorMsg);
+      logger.error("Failed to update item", err);
     }
   };
 
@@ -183,10 +216,12 @@ const Popup: React.FC = () => {
           isFavorite: !selectedItem.isFavorite,
         });
       }
+      logger.info(`Toggled favorite for item: ${id}`);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to toggle favorite"
-      );
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to toggle favorite";
+      setError(errorMsg);
+      logger.error("Failed to toggle favorite", err);
     }
   };
 
@@ -211,6 +246,7 @@ const Popup: React.FC = () => {
   const handleCreateItemInFolder = (folderId?: string) => {
     setCreateModalFolderId(folderId);
     setShowCreateModal(true);
+    logger.debug(`Creating item in folder: ${folderId || "root"}`);
   };
 
   // Filter items based on search and type
@@ -245,6 +281,15 @@ const Popup: React.FC = () => {
         <h1 className="text-xl font-semibold">ShortcutPaste</h1>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowLogs(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-button-second-bg hover:bg-button-second-bg-hover rounded-lg text-sm transition-colors"
+            title="View logs"
+          >
+            <Bug size={14} />
+            Logs
+          </button>
+
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm transition-colors"
@@ -320,14 +365,6 @@ const Popup: React.FC = () => {
         </div>
       )}
 
-      {/* Shortcut Info */}
-      <div className="p-2 bg-sidebar-background text-xs text-text-secondary border-b border-border-default">
-        <div className="flex items-center gap-1 justify-center">
-          <Keyboard size={12} />
-          <span>Shortcut: Ctrl+Alt+V (Paste Favorite)</span>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Tree View */}
@@ -374,6 +411,11 @@ const Popup: React.FC = () => {
           }}
           initialFolderId={createModalFolderId}
         />
+      )}
+
+      {/* Log Collector Modal */}
+      {showLogs && (
+        <LogCollector isOpen={showLogs} onClose={() => setShowLogs(false)} />
       )}
     </div>
   );
