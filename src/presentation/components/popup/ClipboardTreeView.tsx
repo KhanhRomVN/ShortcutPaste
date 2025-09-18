@@ -83,7 +83,7 @@ const ClipboardTreeView: React.FC<ClipboardTreeViewProps> = ({
   // Calculate total storage usage
   const calculateStorageInfo = () => {
     const totalBytes = items.reduce((sum, item) => sum + item.size, 0);
-    const maxBytes = 5 * 1024 * 1024; // 5MB limit for example
+    const maxBytes = 100 * 1024;
     const usagePercentage = (totalBytes / maxBytes) * 100;
 
     return {
