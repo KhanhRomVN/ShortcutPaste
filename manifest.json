@@ -9,8 +9,7 @@
     "storage",
     "scripting",
     "clipboardRead",
-    "clipboardWrite",
-    "notifications"
+    "clipboardWrite"
   ],
   "host_permissions": [
     "*://*/*"
